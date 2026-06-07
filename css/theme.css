@@ -1,0 +1,118 @@
+/*
+ * theme.css — Design tokens for the Desk Dashboard.
+ *
+ * ALL colours live here as CSS custom properties.
+ * Every other CSS file reads from these variables — never hardcodes colours.
+ * Switching theme = one attribute change on <html data-theme="...">.
+ *
+ * To change a colour across the entire dashboard, edit it here once.
+ */
+
+/* ─── DARK THEME (default) ──────────────────────────────────────── */
+
+:root,
+:root[data-theme="dark"] {
+  /* Backgrounds */
+  --bg:              #0A0A0F;   /* page / ambient background       */
+  --surface:         #13131A;   /* widget card background          */
+  --surface-raised:  #1A1A24;   /* hover / elevated surface        */
+
+  /* Borders */
+  --border:          #1E1E2E;   /* widget borders, dividers        */
+  --border-subtle:   #16161F;   /* very faint structural lines     */
+
+  /* Text */
+  --text-primary:    #FFFFFF;   /* main labels, clock digits       */
+  --text-secondary:  #6B6B8A;   /* dates, conditions, labels       */
+  --text-tertiary:   #32324A;   /* hints, disabled, very faint     */
+
+  /* Accent */
+  --accent:          #4A9EFF;   /* active pill, live dot, links    */
+  --accent-dim:      rgba(74, 158, 255, 0.15);
+
+  /* AQI severity colours */
+  --aqi-good:        #32D74B;   /* AQI 1–2   Good / Fair           */
+  --aqi-moderate:    #FF9F0A;   /* AQI 3     Moderate              */
+  --aqi-poor:        #FF453A;   /* AQI 4–5   Poor / Very Poor      */
+
+  /* PWA / system */
+  --theme-color:     #0A0A0F;
+}
+
+
+/* ─── LIGHT THEME ───────────────────────────────────────────────── */
+
+:root[data-theme="light"] {
+  /* Backgrounds */
+  --bg:              #F2F4F7;
+  --surface:         #FFFFFF;
+  --surface-raised:  #F8F9FB;
+
+  /* Borders */
+  --border:          #E0E3EC;
+  --border-subtle:   #ECEEF4;
+
+  /* Text */
+  --text-primary:    #111118;
+  --text-secondary:  #8080A0;
+  --text-tertiary:   #C0C0D4;
+
+  /* Accent */
+  --accent:          #0055CC;
+  --accent-dim:      rgba(0, 85, 204, 0.12);
+
+  /* AQI */
+  --aqi-good:        #1A7A2E;
+  --aqi-moderate:    #C05A00;
+  --aqi-poor:        #CC2200;
+
+  /* PWA / system */
+  --theme-color:     #F2F4F7;
+}
+
+
+/* ─── BASE RESET ─────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin:  0;
+  padding: 0;
+
+  /* Suppress the blue flash on tap on iOS */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  /* iOS Safari full-height fix */
+  height: -webkit-fill-available;
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  min-height: -webkit-fill-available;
+  overflow: hidden;
+
+  background:  var(--bg);
+  color:       var(--text-primary);
+
+  /*
+   * Font stack: resolves to San Francisco on iPhone / Mac (exactly what
+   * was designed). Falls back to system UI on other devices.
+   */
+  font-family: -apple-system, "SF Pro Display", "SF Pro", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button {
+  border:      none;
+  background:  none;
+  cursor:      pointer;
+  font-family: inherit;
+  color:       inherit;
+  -webkit-appearance: none;
+  appearance:  none;
+}

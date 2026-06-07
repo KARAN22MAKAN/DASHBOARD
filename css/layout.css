@@ -1,0 +1,232 @@
+/*
+ * layout.css — Structural layout for the active dashboard.
+ *
+ * Handles the 58/42 landscape split and portrait stacked layout.
+ * All colours come from theme.css variables — nothing is hardcoded here.
+ */
+
+/* ─── ACTIVE DASHBOARD ───────────────────────────────────────────── */
+
+.dashboard {
+  width:    100%;
+  height:   100%;
+  background: var(--bg);
+  /* Visibility is controlled by animations.css */
+}
+
+/* Landscape: 58% clock / 42% widgets side by side */
+@media (orientation: landscape) {
+  .dashboard {
+    display: grid;
+    grid-template-columns: 58fr 42fr;
+    grid-template-rows: 1fr;
+    grid-template-areas: "left right";
+    height: 100%;
+  }
+}
+
+/* Portrait: clock on top, widgets below */
+@media (orientation: portrait) {
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "left"
+      "right";
+    height: 100%;
+  }
+}
+
+
+/* ─── CONTROLS BAR ───────────────────────────────────────────────── */
+
+/* Fixed in viewport so it's always reachable regardless of scroll */
+.controls-bar {
+  position: fixed;
+  top:   max(env(safe-area-inset-top, 0px), 10px);
+  right: max(env(safe-area-inset-right, 0px), 14px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-btn {
+  width:  34px;
+  height: 20px;
+  border-radius: 10px;
+  background:  var(--surface);
+  border:      0.5px solid var(--border);
+  font-size:   13px;
+  display:     flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+
+/* ─── LEFT PANEL — CLOCK ─────────────────────────────────────────── */
+
+.panel-left {
+  grid-area: left;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  padding:  28px 24px;
+  position: relative;
+}
+
+@media (orientation: landscape) {
+  .panel-left {
+    border-right: 0.5px solid var(--border);
+  }
+}
+
+@media (orientation: portrait) {
+  .panel-left {
+    padding: 28px 24px 24px;
+    border-bottom: 0.5px solid var(--border);
+  }
+}
+
+/* Clock text group */
+.clock-container {
+  text-align: center;
+}
+
+.clock-time-row {
+  display:         flex;
+  align-items:     flex-start;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1;
+}
+
+.clock-digits {
+  font-size:      clamp(52px, 11vw, 80px);
+  font-weight:    700;
+  letter-spacing: -0.025em;
+  color:          var(--text-primary);
+}
+
+.clock-ampm {
+  font-size:   clamp(14px, 2.2vw, 20px);
+  font-weight: 600;
+  color:       var(--text-secondary);
+  padding-top: 6px;
+}
+
+.clock-date {
+  font-size:      clamp(12px, 1.5vw, 16px);
+  font-weight:    400;
+  color:          var(--text-secondary);
+  margin-top:     6px;
+  letter-spacing: 0.02em;
+}
+
+.clock-day {
+  font-weight: 500;
+}
+
+/* 12h / 24h toggle pill — sits at the bottom of the panel */
+.clock-controls {
+  position: absolute;
+  bottom:   max(env(safe-area-inset-bottom, 0px), 14px);
+}
+
+.format-btn {
+  display:     flex;
+  align-items: center;
+  background:  var(--surface);
+  border:      0.5px solid var(--border);
+  border-radius: 20px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.fmt-option {
+  padding:        3px 14px;
+  font-size:      11px;
+  font-weight:    500;
+  border-radius:  18px;
+  color:          var(--text-secondary);
+  transition:     background 0.2s ease, color 0.2s ease;
+}
+
+.fmt-active {
+  background: var(--accent);
+  color:      #FFFFFF;
+}
+
+
+/* ─── RIGHT PANEL — WIDGETS ──────────────────────────────────────── */
+
+.panel-right {
+  grid-area:      right;
+  display:        flex;
+  flex-direction: column;
+  gap:            10px;
+  padding:        52px 14px 14px;
+  overflow:       hidden;
+  min-height:     0;
+}
+
+@media (orientation: portrait) {
+  .panel-right {
+    padding: 14px;
+  }
+}
+
+/* Base widget card */
+.widget {
+  background:    var(--surface);
+  border:        0.5px solid var(--border);
+  border-radius: 14px;
+  padding:       14px;
+  flex:          1;
+  min-height:    0;
+  overflow:      hidden;
+  position:      relative;
+}
+
+/* Dashed placeholder for future widgets */
+.widget-placeholder {
+  background:    transparent;
+  border-style:  dashed;
+  border-color:  var(--text-tertiary);
+  opacity:       0.4;
+  display:       flex;
+  align-items:   center;
+  justify-content: center;
+}
+
+.placeholder-inner {
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.placeholder-plus {
+  display:      block;
+  font-size:    22px;
+  font-weight:  200;
+  line-height:  1;
+  margin-bottom: 6px;
+}
+
+.placeholder-label {
+  font-size:      10px;
+  letter-spacing: 0.1em;
+}
+
+/* Default loading state for any widget */
+.widget-loading {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  height:          100%;
+  font-size:       12px;
+  color:           var(--text-tertiary);
+  font-style:      italic;
+}

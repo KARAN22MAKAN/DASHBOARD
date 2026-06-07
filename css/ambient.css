@@ -1,0 +1,140 @@
+/*
+ * ambient.css — Styles for the ambient (fullscreen clock) mode.
+ *
+ * Landscape: "10:45" on a single enormous line, fills screen width.
+ * Portrait:  "10" stacked over "45" — no colon (user decision).
+ *
+ * The CSS orientation media query handles the switch automatically —
+ * no JavaScript needed for the layout change.
+ */
+
+/* ─── AMBIENT SCREEN CONTAINER ───────────────────────────────────── */
+
+.ambient-screen {
+  position:   fixed;
+  inset:      0;            /* covers the full viewport */
+  z-index:    100;          /* sits above the dashboard */
+
+  background: var(--bg);
+
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+
+  /* Subtle central glow — adds depth without affecting performance */
+  background-image: radial-gradient(
+    ellipse 55% 45% at 50% 48%,
+    rgba(74, 158, 255, 0.04) 0%,
+    transparent 70%
+  );
+}
+
+
+/* ─── AM / PM INDICATOR ──────────────────────────────────────────── */
+
+/* Always top-right corner, regardless of orientation */
+.ambient-ampm {
+  position: absolute;
+  top:   max(env(safe-area-inset-top, 0px), 16px);
+  right: max(env(safe-area-inset-right, 0px), 16px);
+  padding-top: 4px;
+
+  font-size:      16px;
+  font-weight:    600;
+  letter-spacing: 0.06em;
+  color:          var(--text-secondary);
+}
+
+
+/* ─── DATE ───────────────────────────────────────────────────────── */
+
+.ambient-date {
+  margin-top:     14px;
+  font-size:      clamp(11px, 1.8vw, 15px);
+  font-weight:    400;
+  letter-spacing: 0.07em;
+  color:          var(--text-secondary);
+  text-align:     center;
+  opacity:        0.85;
+}
+
+
+/* ─── TAP HINT ───────────────────────────────────────────────────── */
+
+/* Pulses gently after a delay — reminds user the screen is interactive */
+.ambient-hint {
+  position:  absolute;
+  bottom:    max(env(safe-area-inset-bottom, 0px), 14px);
+
+  font-size:      9px;
+  letter-spacing: 1.5px;
+  color:          var(--text-tertiary);
+  text-transform: lowercase;
+
+  /* Starts invisible, fades in slowly after 3s, then pulses */
+  opacity:   0;
+  animation: hint-fade 6s ease-in-out 3s infinite;
+}
+
+@keyframes hint-fade {
+  0%,  40%, 100% { opacity: 0;   }
+  60%, 80%       { opacity: 0.7; }
+}
+
+
+/* ─── LANDSCAPE: single enormous line ────────────────────────────── */
+
+@media (orientation: landscape) {
+  .ambient-clock {
+    display:     flex;
+    align-items: baseline;
+
+    /* Scales with viewport width — fills ~88% of landscape screen */
+    font-size:      clamp(80px, 20vw, 200px);
+    font-weight:    700;
+    letter-spacing: -0.03em;
+    color:          var(--text-primary);
+    line-height:    1;
+  }
+
+  /* Colon is visible in landscape (single-line, natural to include it) */
+  .ambient-colon {
+    display: inline;
+  }
+}
+
+
+/* ─── PORTRAIT: stacked two-line, NO colon ───────────────────────── */
+
+@media (orientation: portrait) {
+  .ambient-clock {
+    display:         flex;
+    flex-direction:  column;
+    align-items:     center;
+
+    /* Scales with viewport width — fills ~80% of portrait screen width */
+    font-size:      clamp(80px, 38vw, 160px);
+    font-weight:    700;
+    color:          var(--text-primary);
+    line-height:    1.06;
+  }
+
+  /* Colon hidden — the stacked layout makes hours/minutes self-evident */
+  .ambient-colon {
+    display: none;
+  }
+
+  /* Slight letter-spacing on "10" balances the narrow "1" character */
+  .ambient-hours {
+    letter-spacing: 0.05em;
+  }
+
+  .ambient-minutes {
+    letter-spacing: -0.01em;
+  }
+}

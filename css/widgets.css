@@ -1,0 +1,136 @@
+/*
+ * widgets.css — Styles for individual widget content.
+ *
+ * Each widget section is labelled. When you add a new widget,
+ * add its styles here under a clearly labelled section.
+ *
+ * Widget cards themselves (border, padding, radius) live in layout.css.
+ * This file handles the CONTENT inside each card.
+ */
+
+
+/* ─── WEATHER WIDGET ─────────────────────────────────────────────── */
+
+#widget-weather {
+  display:         flex;
+  flex-direction:  column;
+  justify-content: center;
+  gap: 0;
+}
+
+/* Temperature — dominant, thin weight contrasts with bold clock */
+.weather-temp {
+  font-size:   clamp(30px, 5.5vw, 52px);
+  font-weight: 200;
+  color:       var(--text-primary);
+  line-height: 1;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.weather-unit {
+  font-size:      0.38em;
+  font-weight:    300;
+  color:          var(--text-secondary);
+  margin-top:     0.12em;
+}
+
+/* Weather condition (e.g. "Partly Cloudy") */
+.weather-condition {
+  font-size:    11px;
+  font-weight:  400;
+  color:        var(--text-secondary);
+  margin-bottom: 10px;
+  letter-spacing: 0.01em;
+}
+
+/* AQI badge pill */
+.weather-aqi {
+  display:     inline-flex;
+  align-items: center;
+  gap:         4px;
+  padding:     4px 10px;
+  border-radius: 6px;
+  border:      0.5px solid transparent;
+  font-size:   10.5px;
+  margin-bottom: 10px;
+  width:       fit-content;
+  max-width:   100%;
+}
+
+.weather-aqi-value {
+  font-weight: 600;
+}
+
+.weather-aqi-label {
+  opacity: 0.8;
+}
+
+/* Bottom meta row: live dot + location + timestamp */
+.weather-meta {
+  display:     flex;
+  align-items: center;
+  gap:         5px;
+  font-size:   10px;
+  color:       var(--text-tertiary);
+  margin-top:  auto;
+}
+
+/* Status dot — green when live, amber when stale */
+.weather-dot {
+  width:         6px;
+  height:        6px;
+  border-radius: 50%;
+  flex-shrink:   0;
+  background:    var(--aqi-good);
+}
+
+.weather-dot.is-stale {
+  background: var(--aqi-moderate);
+}
+
+/* "stale" text badge shown when serving cached data */
+.stale-badge {
+  padding:       1px 5px;
+  border-radius: 4px;
+  background:    var(--aqi-moderate);
+  color:         #FFFFFF;
+  font-size:     9px;
+  font-weight:   500;
+  opacity:       0.85;
+  margin-left:   2px;
+}
+
+/* Error / empty state */
+.weather-error {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  height:          100%;
+  gap:             6px;
+  color:           var(--text-tertiary);
+  font-size:       12px;
+  text-align:      center;
+  line-height:     1.5;
+}
+
+
+/* ─── ADD FUTURE WIDGET STYLES BELOW ────────────────────────────── */
+/*
+ * Template:
+ *
+ * #widget-yourwidget {
+ *   display: flex;
+ *   flex-direction: column;
+ * }
+ *
+ * .yourwidget-title {
+ *   font-size: 10px;
+ *   color: var(--text-tertiary);
+ *   letter-spacing: 0.08em;
+ *   margin-bottom: 8px;
+ * }
+ */

@@ -1,0 +1,81 @@
+/*
+ * animations.css — All transitions and state-change animations.
+ *
+ * Uses only `opacity` and `visibility` for show/hide — never `display`.
+ * This keeps transitions smooth because CSS can animate opacity.
+ * `visibility: hidden` makes elements non-interactive without removing them.
+ *
+ * GPU-safe rule: only animate `transform` and `opacity`.
+ * Both are GPU-composited and never trigger layout reflow.
+ */
+
+/* ─── AMBIENT ↔ ACTIVE TRANSITION ───────────────────────────────── */
+
+/* Ambient screen: starts visible */
+.ambient-screen {
+  opacity:    1;
+  visibility: visible;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+/* Ambient screen hidden state (after user taps) */
+.ambient-screen.is-hidden {
+  opacity:        0;
+  visibility:     hidden;
+  pointer-events: none;
+}
+
+/* Dashboard: starts invisible */
+.dashboard {
+  opacity:    0;
+  visibility: hidden;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+/* Dashboard revealed state */
+.dashboard.is-active {
+  opacity:    1;
+  visibility: visible;
+}
+
+
+/* ─── THEME SWITCH ───────────────────────────────────────────────── */
+
+/*
+ * When theme.js toggles data-theme on <html>, these transitions
+ * make background and surface colours cross-fade smoothly.
+ */
+body,
+.widget,
+.format-btn,
+.control-btn,
+.ambient-screen {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+
+/* ─── WIDGET REFRESH PULSE ───────────────────────────────────────── */
+
+/* Applied briefly when a widget fetches fresh data */
+@keyframes data-refresh {
+  0%   { opacity: 1; }
+  40%  { opacity: 0.65; }
+  100% { opacity: 1; }
+}
+
+.widget-refreshing {
+  animation: data-refresh 0.6s ease;
+}
+
+
+/* ─── STALE DATA PULSE ───────────────────────────────────────────── */
+
+/* Slow pulse on the status dot when showing cached data */
+@keyframes stale-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1;   }
+}
+
+.stale-pulse {
+  animation: stale-pulse 2.5s ease-in-out infinite;
+}
