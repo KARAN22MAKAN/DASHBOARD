@@ -1,140 +1,212 @@
-/*
- * ambient.css — Styles for the ambient (fullscreen clock) mode.
- *
- * Landscape: "10:45" on a single enormous line, fills screen width.
- * Portrait:  "10" stacked over "45" — no colon (user decision).
- *
- * The CSS orientation media query handles the switch automatically —
- * no JavaScript needed for the layout change.
- */
+/* ============================================================
+   ambient.css  —  Fullscreen ambient clock
+   
+   iOS 12 Safari compatible:
+     ✗ No clamp()     — requires iOS 13.4+, silently ignored on iPhone 6
+     ✗ No min()/max() — same, requires iOS 13.4+
+     ✗ No nested @media rules
+     ✗ No gap property — flexbox gap requires iOS 14.5+
+     ✓ Plain vw units with @media caps instead
+   ============================================================ */
 
-/* ─── AMBIENT SCREEN CONTAINER ───────────────────────────────────── */
+/* ── iOS Safari full-height fix ─────────────────────────────── */
+html {
+  height: -webkit-fill-available;
+}
+body {
+  min-height: -webkit-fill-available;
+}
 
-.ambient-screen {
-  position:   fixed;
-  inset:      0;            /* covers the full viewport */
-  z-index:    100;          /* sits above the dashboard */
-
-  background: var(--bg);
-
-  display:         flex;
-  flex-direction:  column;
-  align-items:     center;
-  justify-content: center;
-
-  cursor: pointer;
-  -webkit-user-select: none;
-  user-select: none;
-
-  /* Subtle central glow — adds depth without affecting performance */
+/* ── Ambient screen: fixed fullscreen overlay ────────────────── */
+#ambient-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  height: -webkit-fill-available;
+  background-color: var(--bg);
   background-image: radial-gradient(
     ellipse 55% 45% at 50% 48%,
     rgba(74, 158, 255, 0.04) 0%,
     transparent 70%
   );
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  z-index: 100;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
-
-/* ─── AM / PM INDICATOR ──────────────────────────────────────────── */
-
-/* Always top-right corner, regardless of orientation */
+/* ── AM/PM: top-right corner ─────────────────────────────────── */
 .ambient-ampm {
   position: absolute;
-  top:   max(env(safe-area-inset-top, 0px), 16px);
-  right: max(env(safe-area-inset-right, 0px), 16px);
-  padding-top: 4px;
-
-  font-size:      16px;
-  font-weight:    600;
-  letter-spacing: 0.06em;
-  color:          var(--text-secondary);
+  top: 16px;
+  right: 20px;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
 }
 
+/* ── Clock digit wrapper ─────────────────────────────────────── */
+.ambient-clock {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  line-height: 0.88;
+}
 
-/* ─── DATE ───────────────────────────────────────────────────────── */
+/* ── Hour and minute digits: base styles ─────────────────────── */
+#ambient-hours,
+#ambient-minutes {
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 0.88;
+}
 
-.ambient-date {
-  margin-top:     14px;
-  font-size:      clamp(11px, 1.8vw, 15px);
-  font-weight:    400;
+/* ── Colon separator ─────────────────────────────────────────── */
+.ambient-colon {
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 0.88;
+}
+
+/* ── Date label: pinned to bottom-centre ────────────────────── */
+#ambient-date {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
   letter-spacing: 0.07em;
-  color:          var(--text-secondary);
-  text-align:     center;
-  opacity:        0.85;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-
-/* ─── TAP HINT ───────────────────────────────────────────────────── */
-
-/* Pulses gently after a delay — reminds user the screen is interactive */
+/* ── "Tap to expand" hint: fades in after 3 s ───────────────── */
 .ambient-hint {
-  position:  absolute;
-  bottom:    max(env(safe-area-inset-bottom, 0px), 14px);
-
-  font-size:      9px;
-  letter-spacing: 1.5px;
-  color:          var(--text-tertiary);
-  text-transform: lowercase;
-
-  /* Starts invisible, fades in slowly after 3s, then pulses */
-  opacity:   0;
-  animation: hint-fade 6s ease-in-out 3s infinite;
+  position: absolute;
+  bottom: 44px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+  opacity: 0;
+  -webkit-animation: ambientHintFade 1s ease 3s forwards;
+  animation: ambientHintFade 1s ease 3s forwards;
 }
 
-@keyframes hint-fade {
-  0%,  40%, 100% { opacity: 0;   }
-  60%, 80%       { opacity: 0.7; }
+@-webkit-keyframes ambientHintFade {
+  to { opacity: 1; }
+}
+@keyframes ambientHintFade {
+  to { opacity: 1; }
 }
 
-
-/* ─── LANDSCAPE: single enormous line ────────────────────────────── */
-
+/* ============================================================
+   LANDSCAPE — single line "10:45", colon VISIBLE
+   iPhone 6 landscape viewport ≈ 667 × 375 CSS px
+   20vw of 667px = 133px — fills width correctly
+   ============================================================ */
 @media (orientation: landscape) {
-  .ambient-clock {
-    display:     flex;
-    align-items: baseline;
 
-    /* Scales with viewport width — fills ~88% of landscape screen */
-    font-size:      clamp(80px, 20vw, 200px);
-    font-weight:    700;
-    letter-spacing: -0.03em;
-    color:          var(--text-primary);
-    line-height:    1;
+  .ambient-clock {
+    -webkit-flex-direction: row;
+    flex-direction: row;
   }
 
-  /* Colon is visible in landscape (single-line, natural to include it) */
+  /* FIX: was clamp(80px, 20vw, 200px) — clamp() unsupported on iOS 12 */
+  #ambient-hours,
+  #ambient-minutes,
   .ambient-colon {
-    display: inline;
+    font-size: 20vw;
+    letter-spacing: -0.03em;
+  }
+
+  .ambient-colon {
+    display: block; /* visible in landscape */
+    margin: 0 0.01em;
+  }
+
+  #ambient-date {
+    font-size: 12px;
   }
 }
 
-
-/* ─── PORTRAIT: stacked two-line, NO colon ───────────────────────── */
-
-@media (orientation: portrait) {
-  .ambient-clock {
-    display:         flex;
-    flex-direction:  column;
-    align-items:     center;
-
-    /* Scales with viewport width — fills ~80% of portrait screen width */
-    font-size:      clamp(80px, 38vw, 160px);
-    font-weight:    700;
-    color:          var(--text-primary);
-    line-height:    1.06;
-  }
-
-  /* Colon hidden — the stacked layout makes hours/minutes self-evident */
+/* Cap font size on large landscape screens (tablet / desktop) */
+@media (orientation: landscape) and (min-width: 900px) {
+  #ambient-hours,
+  #ambient-minutes,
   .ambient-colon {
-    display: none;
+    font-size: 170px;
   }
 
-  /* Slight letter-spacing on "10" balances the narrow "1" character */
-  .ambient-hours {
-    letter-spacing: 0.05em;
+  #ambient-date {
+    font-size: 15px;
+  }
+}
+
+/* ============================================================
+   PORTRAIT — stacked layout, colon HIDDEN (Karan's decision)
+   iPhone 6 portrait viewport ≈ 375 × 667 CSS px
+   38vw of 375px = 142px — fills height across two lines correctly
+   ============================================================ */
+@media (orientation: portrait) {
+
+  .ambient-clock {
+    -webkit-flex-direction: column;
+    flex-direction: column;
+    -webkit-align-items: center;
+    align-items: center;
   }
 
-  .ambient-minutes {
+  .ambient-colon {
+    display: none; /* HIDDEN in portrait — Karan's explicit decision */
+  }
+
+  /* FIX: was clamp(80px, 38vw, 160px) — clamp() unsupported on iOS 12 */
+  #ambient-hours {
+    font-size: 38vw;
+    letter-spacing: 0.05em;  /* balances narrow "1" digits */
+    margin-bottom: 0.04em;
+  }
+
+  #ambient-minutes {
+    font-size: 38vw;
     letter-spacing: -0.01em;
+  }
+
+  #ambient-date {
+    font-size: 13px;
+  }
+}
+
+/* Cap font size on large portrait screens (iPad / big Android) */
+@media (orientation: portrait) and (min-width: 600px) {
+  #ambient-hours,
+  #ambient-minutes {
+    font-size: 220px;
   }
 }

@@ -7,6 +7,10 @@
  *
  * Updates BOTH the ambient screen and the active dashboard
  * from a single source of truth so they never drift apart.
+ *
+ * FIX: Added visibilitychange listener so the clock resyncs every time
+ * iOS resumes the PWA from background (prevents frozen/stale time).
+ * FIX: _initTimeout stored so it can be cancelled on restart.
  */
 
 const ClockWidget = {
@@ -15,7 +19,8 @@ const ClockWidget = {
   IST_OFFSET_MS: (5 * 60 + 30) * 60 * 1000,
 
   FORMAT_KEY: 'dash_clock_24h',
-  _timer: null,
+  _timer:       null,   // setInterval handle (minute tick)
+  _initTimeout: null,   // setTimeout handle (sync to top of minute) — FIX: was missing
 
   /** Day names and month names used in date formatting */
   DAYS:   ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
@@ -42,17 +47,41 @@ const ClockWidget = {
 
     // Then sync to the top of the next minute for precision
     this._scheduleNextTick();
+
+    // FIX: iOS suspends JS when the PWA is backgrounded. Without this,
+    // the clock freezes at the last rendered time and never updates when
+    // the user picks up the device again.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.render();            // show correct time immediately on wake
+        this._scheduleNextTick(); // restart the sync-to-minute cycle
+      }
+    });
   },
 
   /**
    * Wait until the top of the next minute, then tick every 60 seconds.
    * This is more accurate than a fixed 60s interval starting from page load.
+   *
+   * FIX: Clears any existing timers before scheduling new ones, so calling
+   * this on visibilitychange doesn't stack duplicate intervals.
    */
   _scheduleNextTick() {
+    // Cancel any timers already running before setting new ones
+    if (this._initTimeout !== null) {
+      clearTimeout(this._initTimeout);
+      this._initTimeout = null;
+    }
+    if (this._timer !== null) {
+      clearInterval(this._timer);
+      this._timer = null;
+    }
+
     const now      = this._getIST();
     const msToNext = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
 
-    setTimeout(() => {
+    this._initTimeout = setTimeout(() => { // FIX: store the timeout reference
+      this._initTimeout = null;
       this.render();
       this._timer = setInterval(() => this.render(), 60_000);
     }, msToNext);
