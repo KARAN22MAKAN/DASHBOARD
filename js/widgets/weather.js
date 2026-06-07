@@ -10,8 +10,11 @@
  *   6. On any error → show last cached data with a stale indicator
  *   7. Repeat every CONFIG.weather.refreshMs (30 minutes)
  *
- * SETUP: Replace 'YOUR_OPENWEATHERMAP_KEY_HERE' in config.js with your
- * free API key from https://openweathermap.org/api
+ * iOS 12 FIXES:
+ *   1. Replaced ?? nullish coalescing with explicit null check —
+ *      ?? is not supported on iOS 12 Safari, causes syntax error.
+ *   2. Replaced 60_000 numeric separator with 60000 —
+ *      numeric separators not supported on iOS 12 Safari.
  */
 
 const WeatherWidget = {
@@ -20,24 +23,18 @@ const WeatherWidget = {
   _coords:   null,
   _timer:    null,
 
-  /**
-   * OpenWeatherMap AQI scale: 1 (best) → 5 (worst).
-   * Maps to a label and a CSS colour variable.
-   */
   AQI: [
-    { label: 'Good',      cssVar: 'var(--aqi-good)'     },  // index 1
-    { label: 'Fair',      cssVar: 'var(--aqi-good)'     },  // index 2
-    { label: 'Moderate',  cssVar: 'var(--aqi-moderate)' },  // index 3
-    { label: 'Poor',      cssVar: 'var(--aqi-poor)'     },  // index 4
-    { label: 'Very Poor', cssVar: 'var(--aqi-poor)'     },  // index 5
+    { label: 'Good',      cssVar: 'var(--aqi-good)'     },
+    { label: 'Fair',      cssVar: 'var(--aqi-good)'     },
+    { label: 'Moderate',  cssVar: 'var(--aqi-moderate)' },
+    { label: 'Poor',      cssVar: 'var(--aqi-poor)'     },
+    { label: 'Very Poor', cssVar: 'var(--aqi-poor)'     },
   ],
 
-  /** Initialise — request location then start rendering. */
   init() {
     this._requestLocation();
   },
 
-  /** Ask the browser for the device location. */
   _requestLocation() {
     if (!('geolocation' in navigator)) {
       this._useFallback();
@@ -51,26 +48,22 @@ const WeatherWidget = {
         this._scheduleRefresh();
       },
       (_err) => {
-        // Denied or timed out — silently use the config fallback
         this._useFallback();
       },
       { timeout: 8000, maximumAge: 60000 }
     );
   },
 
-  /** Use the Mumbai fallback coordinates from config. */
   _useFallback() {
-    this._coords = { ...CONFIG.weather.fallback };
+    this._coords = { lat: CONFIG.weather.fallback.lat, lon: CONFIG.weather.fallback.lon };
     this.render();
     this._scheduleRefresh();
   },
 
-  /** Fetch fresh data and update the widget. Called on init and every 30 min. */
   async render() {
     const container = document.getElementById('widget-weather');
     if (!container) return;
 
-    // Guard: show a helpful message until the API key is added
     if (CONFIG.weather.apiKey === 'YOUR_OPENWEATHERMAP_KEY_HERE') {
       container.innerHTML = this._errorHTML(
         'Add your OpenWeatherMap API key to js/config.js to see weather'
@@ -83,19 +76,17 @@ const WeatherWidget = {
       const key  = CONFIG.weather.apiKey;
       const base = 'https://api.openweathermap.org/data/2.5';
 
-      // Both requests run in parallel — faster than sequential
       const [weatherResp, airResp] = await Promise.all([
-        fetch(`${base}/weather?lat=${lat}&lon=${lon}&appid=${key}&units=metric`),
-        fetch(`${base}/air_pollution?lat=${lat}&lon=${lon}&appid=${key}`),
+        fetch(base + '/weather?lat=' + lat + '&lon=' + lon + '&appid=' + key + '&units=metric'),
+        fetch(base + '/air_pollution?lat=' + lat + '&lon=' + lon + '&appid=' + key),
       ]);
 
-      if (!weatherResp.ok) throw new Error(`Weather API: ${weatherResp.status}`);
-      if (!airResp.ok)     throw new Error(`AQI API: ${airResp.status}`);
+      if (!weatherResp.ok) throw new Error('Weather API: ' + weatherResp.status);
+      if (!airResp.ok)     throw new Error('AQI API: ' + airResp.status);
 
       const weatherData = await weatherResp.json();
       const airData     = await airResp.json();
 
-      // Build a clean data object
       const data = {
         temp:      Math.round(weatherData.main.temp),
         feelsLike: Math.round(weatherData.main.feels_like),
@@ -105,17 +96,14 @@ const WeatherWidget = {
         updatedAt: Date.now(),
       };
 
-      // Save to cache before rendering (so even a render error leaves good data)
       this._saveCache(data);
 
-      // Add a subtle refresh animation
       container.classList.add('widget-refreshing');
       setTimeout(() => container.classList.remove('widget-refreshing'), 700);
 
       this._renderData(container, data, false);
 
     } catch (err) {
-      // Network error, API error, etc. — try the cache
       const cached = this._loadCache();
       if (cached) {
         this._renderData(container, cached, true);
@@ -125,69 +113,54 @@ const WeatherWidget = {
     }
   },
 
-  /**
-   * Build and inject the weather card HTML.
-   * @param {HTMLElement} el       — the widget container
-   * @param {Object}      data     — weather data object
-   * @param {boolean}     isStale  — true when showing cached data
-   */
   _renderData(el, data, isStale) {
-    const aqiInfo  = this.AQI[(data.aqi ?? 3) - 1] || this.AQI[2];
+    // FIX 1: was (data.aqi ?? 3) — ?? nullish coalescing not supported on iOS 12.
+    // Replaced with explicit null/undefined check.
+    const aqiValue = (data.aqi !== null && data.aqi !== undefined) ? data.aqi : 3;
+    const aqiInfo  = this.AQI[aqiValue - 1] || this.AQI[2];
     const dotClass = isStale ? 'weather-dot is-stale stale-pulse' : 'weather-dot';
     const timeAgo  = isStale ? this._timeAgo(data.updatedAt) : 'Just now';
 
-    el.innerHTML = `
-      <div class="weather-temp">
-        ${data.temp}<span class="weather-unit">°C</span>
-      </div>
-
-      <div class="weather-condition">${data.condition}</div>
-
-      <div class="weather-aqi"
-           style="color:${aqiInfo.cssVar};
-                  border-color:${aqiInfo.cssVar};
-                  background:${aqiInfo.cssVar}12;">
-        <span class="weather-aqi-value">AQI ${data.aqi}</span>
-        <span class="weather-aqi-label"> · ${aqiInfo.label}</span>
-      </div>
-
-      <div class="weather-meta">
-        <span class="${dotClass}"></span>
-        <span>${data.city} · ${timeAgo}</span>
-        ${isStale ? '<span class="stale-badge">stale</span>' : ''}
-      </div>
-    `;
+    el.innerHTML = '<div class="weather-temp">'
+      + data.temp + '<span class="weather-unit">\u00B0C</span>'
+      + '</div>'
+      + '<div class="weather-condition">' + data.condition + '</div>'
+      + '<div class="weather-aqi"'
+      + ' style="color:' + aqiInfo.cssVar + ';'
+      + 'border-color:' + aqiInfo.cssVar + ';'
+      + 'background:' + aqiInfo.cssVar.replace('var(', 'rgba(').replace(')', ', 0.07)') + ';">'
+      + '<span class="weather-aqi-value">AQI ' + aqiValue + '</span>'
+      + '<span class="weather-aqi-label"> \u00B7 ' + aqiInfo.label + '</span>'
+      + '</div>'
+      + '<div class="weather-meta">'
+      + '<span class="' + dotClass + '"></span>'
+      + '<span>' + data.city + ' \u00B7 ' + timeAgo + '</span>'
+      + (isStale ? '<span class="stale-badge">stale</span>' : '')
+      + '</div>';
   },
 
-  /** Render a friendly error/empty state. */
   _errorHTML(message) {
-    return `<div class="weather-error">${message}</div>`;
+    return '<div class="weather-error">' + message + '</div>';
   },
 
-  /** Convert a string to Title Case ("partly cloudy" → "Partly Cloudy"). */
   _titleCase(str) {
-    return str.replace(/\b\w/g, c => c.toUpperCase());
+    return str.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
   },
 
-  /**
-   * Convert a past timestamp to a human-readable relative string.
-   * e.g. "2 min ago", "1h ago"
-   */
   _timeAgo(timestamp) {
-    const mins = Math.round((Date.now() - timestamp) / 60_000);
+    // FIX 2: was 60_000 — numeric separators not supported on iOS 12
+    const mins = Math.round((Date.now() - timestamp) / 60000);
     if (mins < 1)  return 'Just now';
-    if (mins < 60) return `${mins} min ago`;
-    return `${Math.round(mins / 60)}h ago`;
+    if (mins < 60) return mins + ' min ago';
+    return Math.round(mins / 60) + 'h ago';
   },
 
-  /** Persist data to localStorage. Silently fails if storage is full. */
   _saveCache(data) {
     try {
       localStorage.setItem(this.CACHE_KEY, JSON.stringify(data));
     } catch (_) {}
   },
 
-  /** Load cached data. Returns null if nothing is stored or JSON is invalid. */
   _loadCache() {
     try {
       const raw = localStorage.getItem(this.CACHE_KEY);
@@ -197,7 +170,6 @@ const WeatherWidget = {
     }
   },
 
-  /** Schedule the next automatic refresh. */
   _scheduleRefresh() {
     if (this._timer) clearInterval(this._timer);
     this._timer = setInterval(() => this.render(), CONFIG.weather.refreshMs);

@@ -1,33 +1,52 @@
 /*
  * widgets.css — Styles for individual widget content.
  *
- * Each widget section is labelled. When you add a new widget,
- * add its styles here under a clearly labelled section.
- *
- * Widget cards themselves (border, padding, radius) live in layout.css.
- * This file handles the CONTENT inside each card.
+ * iOS 12 FIXES:
+ *   1. Replaced clamp() in .weather-temp — clamp() requires iOS 13.4+
+ *   2. Replaced gap: in all flex containers — flexbox gap requires iOS 14.5+
+ *   3. Replaced width: fit-content with -webkit-fit-content fallback
  */
 
 
 /* ─── WEATHER WIDGET ─────────────────────────────────────────────── */
 
 #widget-weather {
+  display:         -webkit-flex;
   display:         flex;
+  -webkit-flex-direction: column;
   flex-direction:  column;
+  -webkit-justify-content: center;
   justify-content: center;
-  gap: 0;
+  /* FIX: removed gap: 0 — not needed and unsupported in flexbox on iOS 12 */
 }
 
-/* Temperature — dominant, thin weight contrasts with bold clock */
+/* Temperature */
+/* FIX: was clamp(30px, 5.5vw, 52px) — clamp() requires iOS 13.4+ */
 .weather-temp {
-  font-size:   clamp(30px, 5.5vw, 52px);
+  font-size:   5.5vw;
   font-weight: 200;
   color:       var(--text-primary);
   line-height: 1;
   margin-bottom: 4px;
-  display: flex;
+  display:     -webkit-flex;
+  display:     flex;
+  -webkit-align-items: flex-start;
   align-items: flex-start;
-  gap: 1px;
+  /* FIX: was gap: 1px — use margin-left on .weather-unit instead */
+}
+
+/* Portrait: 5.5vw of 375px = 20px, too small — use fixed value */
+@media (orientation: portrait) {
+  .weather-temp {
+    font-size: 32px;
+  }
+}
+
+/* Large landscape screens */
+@media (orientation: landscape) and (min-width: 900px) {
+  .weather-temp {
+    font-size: 52px;
+  }
 }
 
 .weather-unit {
@@ -35,9 +54,9 @@
   font-weight:    300;
   color:          var(--text-secondary);
   margin-top:     0.12em;
+  margin-left:    1px; /* FIX: replaces gap: 1px on parent */
 }
 
-/* Weather condition (e.g. "Partly Cloudy") */
 .weather-condition {
   font-size:    11px;
   font-weight:  400;
@@ -48,16 +67,20 @@
 
 /* AQI badge pill */
 .weather-aqi {
+  display:     -webkit-inline-flex;
   display:     inline-flex;
+  -webkit-align-items: center;
   align-items: center;
-  gap:         4px;
+  /* FIX: was gap: 4px — use margin-left on label instead */
   padding:     4px 10px;
   border-radius: 6px;
   border:      0.5px solid transparent;
   font-size:   10.5px;
   margin-bottom: 10px;
-  width:       fit-content;
-  max-width:   100%;
+  /* FIX: was width: fit-content — use -webkit- prefix for iOS 12 */
+  width: -webkit-fit-content;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .weather-aqi-value {
@@ -66,23 +89,30 @@
 
 .weather-aqi-label {
   opacity: 0.8;
+  margin-left: 4px; /* FIX: replaces gap: 4px on parent */
 }
 
-/* Bottom meta row: live dot + location + timestamp */
+/* Bottom meta row */
 .weather-meta {
+  display:     -webkit-flex;
   display:     flex;
+  -webkit-align-items: center;
   align-items: center;
-  gap:         5px;
+  /* FIX: was gap: 5px — use margin-left on sibling items instead */
   font-size:   10px;
   color:       var(--text-tertiary);
   margin-top:  auto;
 }
 
-/* Status dot — green when live, amber when stale */
+.weather-meta > * + * {
+  margin-left: 5px; /* FIX: replaces gap: 5px */
+}
+
 .weather-dot {
   width:         6px;
   height:        6px;
   border-radius: 50%;
+  -webkit-flex-shrink: 0;
   flex-shrink:   0;
   background:    var(--aqi-good);
 }
@@ -91,7 +121,6 @@
   background: var(--aqi-moderate);
 }
 
-/* "stale" text badge shown when serving cached data */
 .stale-badge {
   padding:       1px 5px;
   border-radius: 4px;
@@ -105,32 +134,25 @@
 
 /* Error / empty state */
 .weather-error {
+  display:         -webkit-flex;
   display:         flex;
+  -webkit-flex-direction: column;
   flex-direction:  column;
+  -webkit-align-items: center;
   align-items:     center;
+  -webkit-justify-content: center;
   justify-content: center;
   height:          100%;
-  gap:             6px;
+  /* FIX: was gap: 6px — use margin instead */
   color:           var(--text-tertiary);
   font-size:       12px;
   text-align:      center;
   line-height:     1.5;
 }
 
+.weather-error > * + * {
+  margin-top: 6px; /* FIX: replaces gap: 6px */
+}
+
 
 /* ─── ADD FUTURE WIDGET STYLES BELOW ────────────────────────────── */
-/*
- * Template:
- *
- * #widget-yourwidget {
- *   display: flex;
- *   flex-direction: column;
- * }
- *
- * .yourwidget-title {
- *   font-size: 10px;
- *   color: var(--text-tertiary);
- *   letter-spacing: 0.08em;
- *   margin-bottom: 8px;
- * }
- */

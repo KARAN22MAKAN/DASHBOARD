@@ -5,86 +5,66 @@
  * Handles the 12h/24h format toggle.
  * Has ZERO external dependencies — works fully offline, always.
  *
- * Updates BOTH the ambient screen and the active dashboard
- * from a single source of truth so they never drift apart.
- *
- * FIX 1: Replaced setInterval(60_000) with a 1-second tick that
- *   re-renders only when the minute changes. The 60s interval drifts
- *   over time (callback overhead accumulates), causing the clock to
- *   update 30-40 seconds late. The 1s approach is drift-proof and
- *   always updates within 1 second of the real minute change.
- *
- * FIX 2: visibilitychange listener restarts the tick every time iOS
- *   resumes the PWA from background — prevents frozen/stale time.
+ * iOS 12 FIXES:
+ *   1. Removed ?. optional chaining (×3) — not supported on iOS 12 Safari.
+ *      Caused a syntax error killing the entire script.
+ *   2. Replaced 60_000 numeric separator with 60000 — not supported on iOS 12.
+ *   3. Replaced setInterval(60s) with 1-second tick — 60s interval drifted
+ *      30-40 seconds over time due to callback overhead accumulation.
+ *   4. Added visibilitychange listener — restarts clock when iOS resumes
+ *      the PWA from background (prevents frozen/stale time display).
  */
 
 const ClockWidget = {
 
-  /** IST = UTC + 5 hours 30 minutes, expressed in milliseconds */
   IST_OFFSET_MS: (5 * 60 + 30) * 60 * 1000,
 
   FORMAT_KEY: 'dash_clock_24h',
-  _timer: null,   // setInterval handle for the 1-second tick
+  _timer: null,
 
-  /** Day names and month names used in date formatting */
   DAYS:   ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
   MONTHS: ['January','February','March','April','May','June',
            'July','August','September','October','November','December'],
 
-  /**
-   * Initialise the widget.
-   * Reads saved format preference, renders immediately, then starts
-   * the tick loop and the iOS resume listener.
-   */
   init() {
-    // Restore saved format preference
     const saved = localStorage.getItem(this.FORMAT_KEY);
     if (saved !== null) CONFIG.clock.default24h = saved === 'true';
 
-    // Wire up 12h/24h toggle button
-    document.getElementById('btn-format')
-      ?.addEventListener('click', () => this.toggleFormat());
+    // FIX 1: was document.getElementById('btn-format')?.addEventListener(...)
+    // ?. optional chaining NOT supported on iOS 12 — causes syntax error.
+    const btnFormat = document.getElementById('btn-format');
+    if (btnFormat) {
+      btnFormat.addEventListener('click', () => this.toggleFormat());
+    }
 
-    // Render immediately so clock shows on first frame
     this.render();
     this._updateFormatUI();
-
-    // Start the 1-second tick loop
     this._startTick();
 
-    // FIX 2: iOS suspends JS when the PWA is backgrounded. Without this,
-    // the clock freezes at the last rendered time and never updates when
-    // the user picks up the device again.
+    // FIX 4: restart clock when iOS wakes the PWA from background
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        this.render();     // show correct time immediately on wake
-        this._startTick(); // restart the tick loop cleanly
+        this.render();
+        this._startTick();
       }
     });
   },
 
   /**
-   * Start a 1-second interval that re-renders only when the minute changes.
-   *
-   * FIX 1: Replaces the old setTimeout + setInterval(60_000) approach.
-   * The 60s interval accumulated callback overhead and drifted by 30-40s
-   * after running for a while. Checking every second costs almost nothing
-   * on a plugged-in device and guarantees the display is never more than
-   * 1 second behind the real time.
+   * 1-second interval — re-renders only when the minute actually changes.
+   * FIX 3: replaces the old setInterval(60_000) which drifted over time.
    */
   _startTick() {
-    // Clear any existing tick before starting a new one
     if (this._timer !== null) {
       clearInterval(this._timer);
       this._timer = null;
     }
 
-    let lastMinute = -1; // -1 forces a render on the very first tick
+    let lastMinute = -1;
 
     this._timer = setInterval(() => {
       const ist           = this._getIST();
       const currentMinute = ist.getHours() * 60 + ist.getMinutes();
-
       if (currentMinute !== lastMinute) {
         lastMinute = currentMinute;
         this.render();
@@ -92,39 +72,28 @@ const ClockWidget = {
     }, 1000);
   },
 
-  /** Render current time into all clock elements on the page. */
   render() {
     const ist  = this._getIST();
     const data = this._format(ist);
 
-    // ── Ambient screen ──────────────────────────────────────────
     this._setText('ambient-hours',   data.hours);
     this._setText('ambient-minutes', data.minutes);
     this._setText('ambient-ampm',    data.ampm);
-    this._setText('ambient-date',    `${data.dayName}, ${data.dateStr}`);
+    this._setText('ambient-date',    data.dayName + ', ' + data.dateStr);
 
-    // ── Active dashboard ────────────────────────────────────────
-    this._setText('active-time',  `${data.hours}:${data.minutes}`);
+    this._setText('active-time',  data.hours + ':' + data.minutes);
     this._setText('active-ampm',  data.ampm);
     this._setText('active-day',   data.dayName);
     this._setText('active-date',  data.dateStr);
   },
 
-  /**
-   * Return a Date object representing the current time in IST.
-   * Calculated from UTC to avoid relying on the device timezone setting.
-   */
   _getIST() {
     const now   = new Date();
-    const utcMs = now.getTime() + now.getTimezoneOffset() * 60_000;
+    // FIX 2: was 60_000 — numeric separators not supported on iOS 12
+    const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
     return new Date(utcMs + this.IST_OFFSET_MS);
   },
 
-  /**
-   * Format a Date into display strings.
-   * @param {Date} date — an IST Date object
-   * @returns {{ hours, minutes, ampm, dayName, dateStr }}
-   */
   _format(date) {
     const use24h   = CONFIG.clock.default24h;
     let   rawHours = date.getHours();
@@ -137,18 +106,17 @@ const ClockWidget = {
     } else {
       ampm     = rawHours < 12 ? 'AM' : 'PM';
       rawHours = rawHours % 12 || 12;
-      hours    = String(rawHours); // no leading zero in 12h mode (e.g. "9", not "09")
+      hours    = String(rawHours);
     }
 
     const dayName = this.DAYS[date.getDay()];
-    const dateStr = `${String(date.getDate()).padStart(2, '0')} `
-                  + `${this.MONTHS[date.getMonth()]} `
-                  + `${date.getFullYear()}`;
+    const dateStr = String(date.getDate()).padStart(2, '0') + ' '
+                  + this.MONTHS[date.getMonth()] + ' '
+                  + date.getFullYear();
 
     return { hours, minutes, ampm, dayName, dateStr };
   },
 
-  /** Toggle between 12h and 24h, persist, and re-render. */
   toggleFormat() {
     CONFIG.clock.default24h = !CONFIG.clock.default24h;
     localStorage.setItem(this.FORMAT_KEY, CONFIG.clock.default24h);
@@ -156,21 +124,23 @@ const ClockWidget = {
     this._updateFormatUI();
   },
 
-  /** Sync the pill toggle UI and AM/PM visibility to current format. */
   _updateFormatUI() {
     const use24h = CONFIG.clock.default24h;
 
-    document.getElementById('fmt-12')?.classList.toggle('fmt-active', !use24h);
-    document.getElementById('fmt-24')?.classList.toggle('fmt-active',  use24h);
+    // FIX 1: was document.getElementById('fmt-12')?.classList.toggle(...)
+    // ?. NOT supported on iOS 12 — replaced with null checks.
+    const fmt12 = document.getElementById('fmt-12');
+    if (fmt12) fmt12.classList.toggle('fmt-active', !use24h);
 
-    // Hide AM/PM indicator completely in 24h mode
-    ['active-ampm', 'ambient-ampm'].forEach(id => {
+    const fmt24 = document.getElementById('fmt-24');
+    if (fmt24) fmt24.classList.toggle('fmt-active', use24h);
+
+    ['active-ampm', 'ambient-ampm'].forEach(function(id) {
       const el = document.getElementById(id);
       if (el) el.style.visibility = use24h ? 'hidden' : 'visible';
     });
   },
 
-  /** Helper: safely set textContent without throwing if element is missing. */
   _setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;

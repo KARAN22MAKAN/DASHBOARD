@@ -1,8 +1,12 @@
 /*
  * layout.css — Structural layout for the active dashboard.
  *
- * Handles the 58/42 landscape split and portrait stacked layout.
- * All colours come from theme.css variables — nothing is hardcoded here.
+ * iOS 12 FIXES:
+ *   1. Replaced clamp() with vw units + @media caps — clamp() requires iOS 13.4+
+ *   2. Replaced max(env(...), px) with plain px — max() requires iOS 13.4+.
+ *      iPhone 6 has no notch so env(safe-area-inset-*) = 0 anyway.
+ *   3. Replaced gap: in all flex containers with margin-based spacing —
+ *      flexbox gap requires iOS 14.5+. Grid gap is fine (supported since iOS 12).
  */
 
 /* ─── ACTIVE DASHBOARD ───────────────────────────────────────────── */
@@ -11,10 +15,8 @@
   width:    100%;
   height:   100%;
   background: var(--bg);
-  /* Visibility is controlled by animations.css */
 }
 
-/* Landscape: 58% clock / 42% widgets side by side */
 @media (orientation: landscape) {
   .dashboard {
     display: grid;
@@ -25,7 +27,6 @@
   }
 }
 
-/* Portrait: clock on top, widgets below */
 @media (orientation: portrait) {
   .dashboard {
     display: grid;
@@ -41,15 +42,24 @@
 
 /* ─── CONTROLS BAR ───────────────────────────────────────────────── */
 
-/* Fixed in viewport so it's always reachable regardless of scroll */
 .controls-bar {
   position: fixed;
-  top:   max(env(safe-area-inset-top, 0px), 10px);
-  right: max(env(safe-area-inset-right, 0px), 14px);
+  /* FIX: was max(env(safe-area-inset-top, 0px), 10px) — max() requires iOS 13.4+
+     iPhone 6 has no notch, env() = 0, so plain 10px is correct and safe */
+  top:   10px;
+  right: 14px;
   z-index: 50;
+  display: -webkit-flex;
   display: flex;
+  -webkit-align-items: center;
   align-items: center;
-  gap: 8px;
+  /* FIX: was gap: 8px — flexbox gap requires iOS 14.5+
+     Using margin on sibling buttons instead */
+}
+
+/* Space between multiple control buttons */
+.controls-bar > * + * {
+  margin-left: 8px;
 }
 
 .control-btn {
@@ -59,8 +69,11 @@
   background:  var(--surface);
   border:      0.5px solid var(--border);
   font-size:   13px;
+  display:     -webkit-flex;
   display:     flex;
+  -webkit-align-items: center;
   align-items: center;
+  -webkit-justify-content: center;
   justify-content: center;
   color: var(--text-secondary);
 }
@@ -70,9 +83,13 @@
 
 .panel-left {
   grid-area: left;
+  display:         -webkit-flex;
   display:         flex;
+  -webkit-flex-direction: column;
   flex-direction:  column;
+  -webkit-align-items: center;
   align-items:     center;
+  -webkit-justify-content: center;
   justify-content: center;
   padding:  28px 24px;
   position: relative;
@@ -91,59 +108,107 @@
   }
 }
 
-/* Clock text group */
 .clock-container {
   text-align: center;
 }
 
 .clock-time-row {
+  display:         -webkit-flex;
   display:         flex;
+  -webkit-align-items: flex-start;
   align-items:     flex-start;
+  -webkit-justify-content: center;
   justify-content: center;
-  gap: 4px;
+  /* FIX: was gap: 4px — flexbox gap requires iOS 14.5+ */
   line-height: 1;
 }
 
+/* Space between time digits and AM/PM */
+#active-ampm {
+  margin-left: 4px;
+}
+
+/* FIX: was clamp(52px, 11vw, 80px) — clamp() requires iOS 13.4+
+   Using vw with @media caps instead */
 .clock-digits {
-  font-size:      clamp(52px, 11vw, 80px);
+  font-size:      11vw;
   font-weight:    700;
   letter-spacing: -0.025em;
   color:          var(--text-primary);
 }
 
+@media (orientation: portrait) {
+  .clock-digits {
+    font-size: 13vw; /* ~49px on iPhone 6 portrait (375px) */
+  }
+}
+
+@media (orientation: landscape) and (min-width: 900px) {
+  .clock-digits {
+    font-size: 80px;
+  }
+}
+
+@media (orientation: portrait) and (min-width: 600px) {
+  .clock-digits {
+    font-size: 80px;
+  }
+}
+
+/* FIX: was clamp(14px, 2.2vw, 20px) */
 .clock-ampm {
-  font-size:   clamp(14px, 2.2vw, 20px);
+  font-size:   14px;
   font-weight: 600;
   color:       var(--text-secondary);
   padding-top: 6px;
 }
 
+@media (orientation: landscape) and (min-width: 900px) {
+  .clock-ampm {
+    font-size: 20px;
+  }
+}
+
+/* FIX: was clamp(12px, 1.5vw, 16px) */
 .clock-date {
-  font-size:      clamp(12px, 1.5vw, 16px);
+  font-size:      12px;
   font-weight:    400;
   color:          var(--text-secondary);
   margin-top:     6px;
   letter-spacing: 0.02em;
 }
 
+@media (min-width: 1024px) {
+  .clock-date {
+    font-size: 15px;
+  }
+}
+
 .clock-day {
   font-weight: 500;
 }
 
-/* 12h / 24h toggle pill — sits at the bottom of the panel */
 .clock-controls {
   position: absolute;
-  bottom:   max(env(safe-area-inset-bottom, 0px), 14px);
+  /* FIX: was max(env(safe-area-inset-bottom, 0px), 14px) — max() requires iOS 13.4+ */
+  bottom: 14px;
 }
 
 .format-btn {
+  display:     -webkit-flex;
   display:     flex;
+  -webkit-align-items: center;
   align-items: center;
   background:  var(--surface);
   border:      0.5px solid var(--border);
   border-radius: 20px;
   padding: 2px;
-  gap: 2px;
+  /* FIX: was gap: 2px — flexbox gap requires iOS 14.5+ */
+}
+
+/* Space between 12h and 24h pill options */
+.fmt-option + .fmt-option {
+  margin-left: 2px;
 }
 
 .fmt-option {
@@ -165,9 +230,11 @@
 
 .panel-right {
   grid-area:      right;
+  display:        -webkit-flex;
   display:        flex;
+  -webkit-flex-direction: column;
   flex-direction: column;
-  gap:            10px;
+  /* FIX: was gap: 10px — flexbox gap requires iOS 14.5+ */
   padding:        52px 14px 14px;
   overflow:       hidden;
   min-height:     0;
@@ -179,26 +246,33 @@
   }
 }
 
-/* Base widget card */
+/* Space between widget cards */
+.panel-right > * + * {
+  margin-top: 10px;
+}
+
 .widget {
   background:    var(--surface);
   border:        0.5px solid var(--border);
   border-radius: 14px;
   padding:       14px;
+  -webkit-flex:  1;
   flex:          1;
   min-height:    0;
   overflow:      hidden;
   position:      relative;
 }
 
-/* Dashed placeholder for future widgets */
 .widget-placeholder {
   background:    transparent;
   border-style:  dashed;
   border-color:  var(--text-tertiary);
   opacity:       0.4;
+  display:       -webkit-flex;
   display:       flex;
+  -webkit-align-items: center;
   align-items:   center;
+  -webkit-justify-content: center;
   justify-content: center;
 }
 
@@ -220,10 +294,12 @@
   letter-spacing: 0.1em;
 }
 
-/* Default loading state for any widget */
 .widget-loading {
+  display:         -webkit-flex;
   display:         flex;
+  -webkit-align-items: center;
   align-items:     center;
+  -webkit-justify-content: center;
   justify-content: center;
   height:          100%;
   font-size:       12px;
