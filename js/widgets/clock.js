@@ -8,9 +8,14 @@
  * Updates BOTH the ambient screen and the active dashboard
  * from a single source of truth so they never drift apart.
  *
- * FIX: Added visibilitychange listener so the clock resyncs every time
- * iOS resumes the PWA from background (prevents frozen/stale time).
- * FIX: _initTimeout stored so it can be cancelled on restart.
+ * FIX 1: Replaced setInterval(60_000) with a 1-second tick that
+ *   re-renders only when the minute changes. The 60s interval drifts
+ *   over time (callback overhead accumulates), causing the clock to
+ *   update 30-40 seconds late. The 1s approach is drift-proof and
+ *   always updates within 1 second of the real minute change.
+ *
+ * FIX 2: visibilitychange listener restarts the tick every time iOS
+ *   resumes the PWA from background — prevents frozen/stale time.
  */
 
 const ClockWidget = {
@@ -19,8 +24,7 @@ const ClockWidget = {
   IST_OFFSET_MS: (5 * 60 + 30) * 60 * 1000,
 
   FORMAT_KEY: 'dash_clock_24h',
-  _timer:       null,   // setInterval handle (minute tick)
-  _initTimeout: null,   // setTimeout handle (sync to top of minute) — FIX: was missing
+  _timer: null,   // setInterval handle for the 1-second tick
 
   /** Day names and month names used in date formatting */
   DAYS:   ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
@@ -29,8 +33,8 @@ const ClockWidget = {
 
   /**
    * Initialise the widget.
-   * Reads saved format preference, renders immediately, then schedules
-   * updates to fire at the top of every minute for accuracy.
+   * Reads saved format preference, renders immediately, then starts
+   * the tick loop and the iOS resume listener.
    */
   init() {
     // Restore saved format preference
@@ -45,46 +49,47 @@ const ClockWidget = {
     this.render();
     this._updateFormatUI();
 
-    // Then sync to the top of the next minute for precision
-    this._scheduleNextTick();
+    // Start the 1-second tick loop
+    this._startTick();
 
-    // FIX: iOS suspends JS when the PWA is backgrounded. Without this,
+    // FIX 2: iOS suspends JS when the PWA is backgrounded. Without this,
     // the clock freezes at the last rendered time and never updates when
     // the user picks up the device again.
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        this.render();            // show correct time immediately on wake
-        this._scheduleNextTick(); // restart the sync-to-minute cycle
+        this.render();     // show correct time immediately on wake
+        this._startTick(); // restart the tick loop cleanly
       }
     });
   },
 
   /**
-   * Wait until the top of the next minute, then tick every 60 seconds.
-   * This is more accurate than a fixed 60s interval starting from page load.
+   * Start a 1-second interval that re-renders only when the minute changes.
    *
-   * FIX: Clears any existing timers before scheduling new ones, so calling
-   * this on visibilitychange doesn't stack duplicate intervals.
+   * FIX 1: Replaces the old setTimeout + setInterval(60_000) approach.
+   * The 60s interval accumulated callback overhead and drifted by 30-40s
+   * after running for a while. Checking every second costs almost nothing
+   * on a plugged-in device and guarantees the display is never more than
+   * 1 second behind the real time.
    */
-  _scheduleNextTick() {
-    // Cancel any timers already running before setting new ones
-    if (this._initTimeout !== null) {
-      clearTimeout(this._initTimeout);
-      this._initTimeout = null;
-    }
+  _startTick() {
+    // Clear any existing tick before starting a new one
     if (this._timer !== null) {
       clearInterval(this._timer);
       this._timer = null;
     }
 
-    const now      = this._getIST();
-    const msToNext = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    let lastMinute = -1; // -1 forces a render on the very first tick
 
-    this._initTimeout = setTimeout(() => { // FIX: store the timeout reference
-      this._initTimeout = null;
-      this.render();
-      this._timer = setInterval(() => this.render(), 60_000);
-    }, msToNext);
+    this._timer = setInterval(() => {
+      const ist           = this._getIST();
+      const currentMinute = ist.getHours() * 60 + ist.getMinutes();
+
+      if (currentMinute !== lastMinute) {
+        lastMinute = currentMinute;
+        this.render();
+      }
+    }, 1000);
   },
 
   /** Render current time into all clock elements on the page. */
