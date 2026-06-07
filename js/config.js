@@ -16,7 +16,7 @@ const CONFIG = {
   // Get a free API key at https://openweathermap.org/api
   // Replace the string below with your key when you reach Sprint 3.
   weather: {
-    apiKey:    '34481b672608ef0561182897c4b9a8aa',
+    apiKey:    '904e7a82dbdd821b549dd491b177df9a',
     refreshMs: 30 * 60 * 1000,                  // refresh every 30 minutes
     fallback:  { lat: 19.0760, lon: 72.8777 },  // Mumbai — used if geolocation is denied
   },
